@@ -1,0 +1,124 @@
+```{r}
+library(ggplot2)
+library(gg.layers)
+library(lubridate)
+library(Ipaper)
+library(sf)
+library(sf2)
+library(rcolors)
+library(ggnewscale)
+library(terra)
+library(data.table)
+
+zip_id <- function(x, scale_old = 1e6, scale_new = 1e2) {
+  doy <- floor(x / scale_old)
+  id <- x - doy * scale_old
+
+  doy * scale_new + id
+}
+
+as_poly <- function(d) { 
+  d = d[, .(x, y, id)]
+  r <- rast(d)
+  p <- as.polygons(r)
+  st_as_sf(p)
+}
+
+make_date_doy <- function(year, doy) as.Date(sprintf("%d%03d", year, doy), "%Y%j")
+
+load("./data-raw/ST3D_ChinaHW_2013.rda")
+shp <- st_simplify(bou1_4p, dTolerance = 5000)
+obj_size(shp)
+
+df %<>% mutate(date = as.Date(date)) %>% as.data.table()
+d_path %<>% as.data.table() %>%
+  mutate(date = make_date_doy(year, doy), .after = "doy")
+```
+
+```{r}
+info <- d_path[, .(
+  # doy_beg = min(doy), 
+  # doy_end = max(doy), 
+  date_beg = make_date_doy(year, min(doy)), 
+  date_end = make_date_doy(year, max(doy)), 
+  HWD = .N, 
+  HWA_max = max(area), HWS_sum = sum(anom_mean * area)), .(year, id)]
+info_large = info[HWD >= 2 & HWA_max > 100][order(-HWS_sum)]
+
+d_path_large = merge(d_path, info_large)
+# 最强的两场被忽略了
+```
+
+```{r}
+info2 <- df[, .N, .(id, date)][N >= 6] %>% select(-N)
+df2 <- merge(df, info2)
+# lst = dt_dlply(df2, .(date), \(x) x)
+# polys = map(lst, as_poly)
+# as_poly(lst[[2]])
+polys_raw <- df2[, as_poly(.SD), .(date)]
+
+g <- do.call(st_sfc, polys_raw$geometry)
+polys <- st_sf(polys_raw[, 1:2], g, crs = st_crs(4326)) %>%
+  mutate(id = zip_id(id) %>% as.factor())
+
+polys_sel <- polys %>% subset(month(date) == 8)
+```
+
+```{r}
+dat <- df[month(date) == 8]
+d_lab <- data.table(date = unique(dat$date)) %>% mutate(label = format(date))
+
+nbrk <- 20
+# MPL_YlOrRd, "amwg256"
+cols <- get_color("MPL_YlOrRd", nbrk) # %>% rev()
+cols <- get_color("amwg256", nbrk) # %>% rev()
+
+p <- ggplot() +
+  geom_raster(data = dat, aes(x, y, fill = value)) +
+  scale_fill_gradientn2(
+    na.value = "transparent",
+    colors = cols
+    # labels = scales::label_number(suffix = unit)
+  ) +
+  geom_richtext_npc(
+    data = d_lab, aes(label = label, x = NULL, y = NULL),
+    npcx = 0, npcy = 1, hjust = 0, vjust = 1
+  ) +
+  # geom_point(
+  #   data = d_path_large[month(date) == 8],
+  #   fill = "transparent",
+  #   shape = 21,
+  #   aes(wlon, wlat, color = as.factor(id), size = area)
+  # ) +
+  new_scale_fill() +
+  geom_sf(data = shp, fill = NA, color = "black", size = 0.1) +
+  geom_sf(data = polys_sel, aes(color = id), linewidth = 0.4, 
+    fill = "transparent", show.legend=FALSE) +
+  geom_sf_text(data = polys_sel, aes(label = id, color = id), 
+    color = "black",
+    vjust = 1, size = 2, show.legend=FALSE) + 
+  theme_bw() +
+  theme(
+    panel.spacing = unit(0, "cm"),
+    plot.margin = margin(),
+    strip.text = element_blank(),
+    panel.grid.major = element_line(linewidth = 0.1, linetype = 3, color = "grey90"),
+    axis.ticks = element_blank(),
+    axis.text = element_blank()
+  ) +
+  labs(x = NULL, y = NULL) +
+  scale_y_continuous(limits = c(15, 55)) +
+  facet_wrap(~date, ncol = 6)
+
+system.time({
+  write_fig(p, "d:/Rplot.pdf", 10, 6)
+})
+```
+
+
+
+```{r}
+# write_sf(s, "./OUTPUT/shp/a.shp")
+# ggplot() +
+#   geom_sf(data = st_as_sfc(polys_sel))
+```
