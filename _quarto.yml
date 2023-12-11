@@ -1,0 +1,3 @@
+project:
+    # execute-dir: file
+    execute-dir: project

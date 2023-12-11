@@ -1,0 +1,22 @@
+# library(ggplot2)
+# library(gg.layers)
+# library(lubridate)
+# library(Ipaper)
+# library(sf)
+# library(sf2)
+# library(rcolors)
+# library(ggnewscale)
+# library(terra)
+# library(data.table)
+
+load("./data-raw/ST3D_ChinaHW_2013.rda")
+shp <- st_simplify(bou1_4p, dTolerance = 5000)
+obj_size(shp)
+
+df %<>% mutate(date = as.Date(date)) %>% as.data.table()
+
+info2 <- df[, .N, .(id, date)][N < 6] %>% select(-N)
+df2 <- merge(df, info2)
+lst = dt_dlply(df2, .(date), \(x) x)
+polys = map(lst, as_poly)
+as_poly(lst[[2]])

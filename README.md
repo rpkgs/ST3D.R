@@ -1,5 +1,6 @@
+# ST3D
 
-# R package template
+> Visualization for ST3D events
 
 <!-- badges: start -->
 [![R-CMD-check](https://github.com/rpkgs/ST3D.R/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/rpkgs/ST3D.R/actions/workflows/R-CMD-check.yaml)
@@ -9,7 +10,6 @@
 <!-- [![monthly](http://cranlogs.r-pkg.org/badges/ST3D.R)](https://www.rpackages.io/package/ST3D.R) -->
 <!-- badges: end -->
 
-The goal of `ST3D.R` is to ...
 
 ## Installation
 
@@ -27,3 +27,10 @@ This is a basic example which shows you how to solve a common problem:
 library(ST3D.R)
 ## basic example code
 ```
+
+![](man/Figures/ST3D_ChinaHW_2013.svg)
+
+## TODO
+
+- [ ] Julia调用，实现实时绘图
+- [ ] 叠加影响分析
