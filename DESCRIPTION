@@ -10,7 +10,8 @@ Imports:
     magrittr, 
     terra, sf, 
     data.table, 
-    ggplot2, rcolors
+    ggplot2, rcolors, 
+    ggnewscale
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
